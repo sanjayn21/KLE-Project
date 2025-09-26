@@ -1,0 +1,41 @@
+app:
+  name: "Unified AI-Powered Security Auditor"
+  version: "1.0.0"
+apis:
+  nvd:
+    api_key: ""
+  virustotal:
+    api_key: "YOUR_VIRUSTOTAL_API_KEY"
+  gmail:
+    credentials_file: "config/gmail_credentials.json"
+risk_scoring:
+  weights:
+    config_risks: 0.25
+    vulnerability_risks: 0.35
+    file_risks: 0.30
+    email_risks: 0.10
+app:
+  output_dir: ./security_auditor_output
+  recent_days_email: 30
+
+scan:
+  high_risk_dirs:
+    - /home/USER/Downloads
+    - /tmp
+  check_firewall: true
+  check_ssh: true
+  package_manager: auto  # auto|apt|dnf|pacman
+
+apis:
+  nvd:
+    api_key: ${NVD_API_KEY}
+  virustotal:
+    api_key: ${VT_API_KEY}
+  gmail:
+    credentials_file: ./google_credentials.json
+    token_file: ./token.json
+
+dashboard:
+  host: localhost
+  port: 8501
+
