@@ -42,14 +42,31 @@ class ConfigScanner:
 
     def check_network_services(self):
         system = platform.system().lower()
-        if system.startswith('win'):
-            cmd = 'netstat -ano'
-            output = subprocess.getoutput(cmd)
-            listening = [line for line in output.splitlines() if 'LISTENING' in line]
-        else:
-            cmd = 'netstat -tlnp'
-            output = subprocess.getoutput(cmd)
-            listening = [line for line in output.splitlines() if 'LISTEN' in line]
+        listening = []
+        try:
+            if system.startswith('win'):
+                # Windows
+                cmd = 'netstat -ano'
+                output = subprocess.getoutput(cmd)
+                listening = [line for line in output.splitlines() if 'LISTENING' in line]
+            elif system.startswith('darwin') or system.startswith('mac'):
+                # macOS: prefer lsof, fallback to netstat
+                output = subprocess.getoutput('lsof -nP -iTCP -sTCP:LISTEN')
+                if output.strip():
+                    listening = [line for line in output.splitlines() if line and not line.startswith('COMMAND')]
+                else:
+                    output = subprocess.getoutput('netstat -anv | grep LISTEN')
+                    listening = [line for line in output.splitlines() if 'LISTEN' in line]
+            else:
+                # Linux/Unix: try ss, fallback to netstat
+                output = subprocess.getoutput('ss -tulpen')
+                if output.strip() and 'LISTEN' in output:
+                    listening = [line for line in output.splitlines() if 'LISTEN' in line]
+                else:
+                    output = subprocess.getoutput('netstat -tlnp')
+                    listening = [line for line in output.splitlines() if 'LISTEN' in line]
+        except Exception as exc:
+            self.logger.warning(f"Network port scan failed: {exc}")
         return {
             'listening_ports': listening
         }
