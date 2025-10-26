@@ -36,22 +36,22 @@ class EmailScanner:
         Detect phishing emails using ML model or rule-based approach
         """
         # Extract email content
-        email_content = self._extract_email_content(msg)
+        subject, body = self._extract_email_content(msg)
         
         if self.use_ml and self.ml_trainer:
             try:
                 # Use ML model for prediction
-                prediction = self.ml_trainer.predict_phishing(email_content)
+                prediction = self.ml_trainer.predict_phishing(subject, body)
                 self.logger.debug(f"ML prediction: {prediction}")
                 return prediction['is_phishing']
             except Exception as e:
                 self.logger.warning(f"ML prediction failed: {str(e)}, using rule-based detection")
         
         # Fallback to rule-based detection
-        return self._rule_based_detection(email_content)
+        return self._rule_based_detection(f"{subject} {body}")
     
     def _extract_email_content(self, msg):
-        """Extract email content from Gmail message"""
+        """Extract email content from Gmail message, returns (subject, body)"""
         try:
             # Get subject
             subject = next((h["value"] for h in msg.get("payload", {}).get("headers", []) 
@@ -76,12 +76,11 @@ class EmailScanner:
                     import base64
                     body = base64.urlsafe_b64decode(data).decode('utf-8', errors='ignore')
             
-            # Combine subject and body
-            return f"{subject} {body}".strip()
+            return subject, body
             
         except Exception as e:
             self.logger.error(f"Error extracting email content: {str(e)}")
-            return ""
+            return "", ""
     
     def _rule_based_detection(self, email_content):
         """Original rule-based phishing detection"""

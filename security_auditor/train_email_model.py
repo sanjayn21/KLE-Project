@@ -32,24 +32,20 @@ def main():
         trainer = EmailMLTrainer()
         
         print("Loading data...")
-        emails, labels = trainer.load_kaggle_data(
+        df, subject_col, label_col = trainer.load_kaggle_data(
             args.data_path, 
-            text_column=args.text_column, 
+            subject_column=args.text_column, 
             label_column=args.label_column
         )
         
-        print(f"Loaded {len(emails)} emails")
-        print(f"Phishing emails: {labels.sum()}")
-        print(f"Legitimate emails: {len(labels) - labels.sum()}")
+        print(f"Loaded {len(df)} rows")
+        print(f"Phishing emails: {df[label_col].sum()}")
+        print(f"Legitimate emails: {len(df) - df[label_col].sum()}")
         
-        print("Extracting features...")
-        X = trainer.extract_features(emails)
-        y = labels.values
-        
-        print(f"Feature matrix shape: {X.shape}")
+        print(f"Feature columns: {[col for col in df.columns if col not in [subject_col, label_col]]}")
         
         print(f"Training {args.model_type} model...")
-        accuracy, X_test, y_test, y_pred = trainer.train_model(X, y, model_type=args.model_type)
+        accuracy, X_test, y_test, y_pred = trainer.train_model(df, label_col, model_type=args.model_type)
         
         print(f"Saving model as '{args.model_name}'...")
         trainer.save_model(args.model_name)

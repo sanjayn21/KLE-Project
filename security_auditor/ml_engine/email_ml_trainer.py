@@ -31,35 +31,51 @@ class EmailMLTrainer:
         # Create models directory if it doesn't exist
         os.makedirs(model_save_path, exist_ok=True)
     
-    def load_kaggle_data(self, csv_path, text_column='text', label_column='label'):
+    def load_kaggle_data(self, csv_path, subject_column='Subject', label_column='label'):
         """
-        Load email data from Kaggle CSV file
-        Expected columns: text (email content), label (0=legitimate, 1=phishing)
+        Load email data from Kaggle CSV file with features
+        Expected columns: Subject (email subject), label (0=legitimate, 1=phishing)
         """
         try:
             self.logger.info(f"Loading data from {csv_path}")
-            df = pd.read_csv(csv_path)
+            # Try different encodings if utf-8 fails
+            try:
+                df = pd.read_csv(csv_path, encoding='utf-8')
+            except UnicodeDecodeError:
+                try:
+                    df = pd.read_csv(csv_path, encoding='latin-1')
+                except:
+                    df = pd.read_csv(csv_path, encoding='cp1252')
             
-            # Handle different possible column names
-            text_col = None
-            label_col = None
+            self.logger.info(f"Available columns: {list(df.columns)}")
             
+            # Check if we have the feature columns
+            feature_columns = [
+                'Having_IP', 'Having_At_Symbol', 'Prefix_Suffix',
+                'URL_Length_Long', 'HTTPS_Token_in_URL', 'Suspicious_TLD',
+                'Shortening_Service', 'Contains_Password_Field', 'Domain_Old(>12mo)',
+                'Alexa_Popular', label_column
+            ]
+            
+            # Find subject column
+            subject_col = None
             for col in df.columns:
-                if col.lower() in ['text', 'content', 'body', 'message', 'email']:
-                    text_col = col
-                elif col.lower() in ['label', 'target', 'phishing', 'is_phishing', 'class']:
-                    label_col = col
+                if col.lower() == 'subject':
+                    subject_col = col
+                    break
             
-            if text_col is None or label_col is None:
-                raise ValueError(f"Could not find text and label columns. Available columns: {list(df.columns)}")
+            if subject_col is None:
+                self.logger.warning("Subject column not found, using first column")
+                subject_col = df.columns[0]
             
-            self.logger.info(f"Using text column: {text_col}, label column: {label_col}")
+            self.logger.info(f"Using subject column: {subject_col}, label column: {label_column}")
             
-            # Clean and prepare data
-            df = df.dropna(subset=[text_col, label_col])
-            df[text_col] = df[text_col].astype(str)
+            # Clean data
+            df = df.dropna(subset=[label_column])
+            if subject_col in df.columns:
+                df[subject_col] = df[subject_col].astype(str)
             
-            return df[text_col], df[label_col]
+            return df, subject_col, label_column
             
         except Exception as e:
             self.logger.error(f"Error loading data: {str(e)}")
@@ -128,11 +144,19 @@ class EmailMLTrainer:
         ]
         return sum(1 for word in suspicious_words if word in email)
     
-    def train_model(self, X, y, model_type='random_forest'):
+    def train_model(self, df, label_column, model_type='random_forest'):
         """
-        Train the selected ML model
+        Train the selected ML model using precomputed features from dataset
         """
         self.logger.info(f"Training {model_type} model...")
+        
+        # Extract feature columns (all except Subject and label)
+        feature_columns = [col for col in df.columns if col not in ['Subject', label_column]]
+        X = df[feature_columns].values
+        y = df[label_column].values
+        
+        self.logger.info(f"Using features: {feature_columns}")
+        self.feature_names = feature_columns
         
         # Split data
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
@@ -199,13 +223,13 @@ class EmailMLTrainer:
         
         self.logger.info(f"Model loaded from {model_path}")
     
-    def predict_phishing(self, email_text):
-        """Predict if an email is phishing"""
+    def predict_phishing(self, email_subject, email_content=""):
+        """Predict if an email is phishing using extracted features"""
         if self.model is None:
             raise ValueError("Model not loaded. Please load or train a model first.")
         
-        # Extract features
-        features = self.extract_features([email_text])
+        # Extract features from email
+        features = self._extract_kaggle_features_from_email(email_subject, email_content)
         features_scaled = self.scaler.transform(features)
         
         # Predict
@@ -217,6 +241,60 @@ class EmailMLTrainer:
             'confidence': float(max(probability)),
             'phishing_probability': float(probability[1]) if len(probability) > 1 else 0.0
         }
+    
+    def _extract_kaggle_features_from_email(self, subject, content=""):
+        """
+        Extract features matching the Kaggle dataset format
+        Returns feature array matching: Having_IP, Having_At_Symbol, etc.
+        """
+        full_text = f"{subject} {content}".lower()
+        
+        # Extract URL if present
+        url_pattern = r'https?://[^\s<>"]+|www\.[^\s<>"]+'
+        urls = re.findall(url_pattern, full_text)
+        
+        features = []
+        
+        # 1. Having_IP - Check if email contains IP address
+        ip_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
+        features.append(int(bool(re.search(ip_pattern, full_text))))
+        
+        # 2. Having_At_Symbol - Check for @ symbol
+        features.append(int('@' in full_text))
+        
+        # 3. Prefix_Suffix - Check for prefix/suffix in URLs (common in phishing)
+        prefix_suffix = int(any(['-' in url or re.search(r'[0-9]+[a-z]+', url) for url in urls]))
+        features.append(prefix_suffix)
+        
+        # 4. URL_Length_Long - Check if URL is long (>75 characters is suspicious)
+        longest_url_len = max([len(url) for url in urls]) if urls else 0
+        features.append(int(longest_url_len > 75))
+        
+        # 5. HTTPS_Token_in_URL - Check if URL uses HTTPS
+        https_present = int(any(['https://' in url.lower() for url in urls]))
+        features.append(https_present)
+        
+        # 6. Suspicious_TLD - Check for suspicious top-level domains
+        suspicious_tlds = ['.tk', '.ml', '.ga', '.cf', '.gq', '.click', '.download']
+        features.append(int(any([tld in url for url in urls for tld in suspicious_tlds])))
+        
+        # 7. Shortening_Service - Check for URL shorteners
+        shorteners = ['bit.ly', 'tinyurl', 'goo.gl', 'short.link', 't.co']
+        features.append(int(any([short in url.lower() for url in urls for short in shorteners])))
+        
+        # 8. Contains_Password_Field - Check for password-related text
+        password_indicators = ['password', 'passwd', 'pass word', 'login', 'sign in', 'sign-in']
+        features.append(int(any([indicator in full_text for indicator in password_indicators])))
+        
+        # 9. Domain_Old - Hard to detect from email alone, use heuristic (1 if no suspicious patterns)
+        # This is a placeholder - assumes legitimate domains are older
+        features.append(1 if not any([url.startswith('http://') and 'https://' in full_text for url in urls]) else 0)
+        
+        # 10. Alexa_Popular - Check for popular domains (heuristic)
+        popular_domains = ['google', 'microsoft', 'amazon', 'facebook', 'twitter', 'linkedin']
+        features.append(int(any([domain in full_text for domain in popular_domains])))
+        
+        return np.array([features])
 
 def main():
     """Example usage of the EmailMLTrainer"""
@@ -224,7 +302,7 @@ def main():
     
     # Example: Load data from Kaggle CSV
     # Replace with your actual Kaggle dataset path
-    csv_path = "path/to/your/kaggle_email_dataset.csv"
+    csv_path = ".csv"
     
     try:
         # Load data

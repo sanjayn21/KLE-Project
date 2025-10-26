@@ -1,0 +1,2 @@
+2025-10-26 13:43:02,942 - EmailMLTrainer - INFO - Loading data from ../emails.csv
+2025-10-26 13:43:02,997 - EmailMLTrainer - ERROR - Error loading data: 'utf-8' codec can't decode byte 0xa0 in position 76859: invalid start byte
