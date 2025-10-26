@@ -21,3 +21,5 @@ weighted avg       0.89      0.89      0.89      1000
 2025-10-26 13:44:16,070 - EmailMLTrainer - INFO - Features saved to security_auditor/ml_engine/models/email_phishing_detector_features.pkl
 2025-10-26 13:45:00,656 - EmailMLTrainer - INFO - Model loaded from security_auditor/ml_engine/models/email_phishing_detector.pkl
 2025-10-26 13:47:09,444 - EmailMLTrainer - INFO - Model loaded from security_auditor/ml_engine/models/email_phishing_detector.pkl
+2025-10-26 22:50:32,017 - EmailMLTrainer - INFO - Model loaded from security_auditor/ml_engine/models/email_phishing_detector.pkl
+2025-10-26 22:58:23,231 - EmailMLTrainer - INFO - Model loaded from security_auditor/ml_engine/models/email_phishing_detector.pkl

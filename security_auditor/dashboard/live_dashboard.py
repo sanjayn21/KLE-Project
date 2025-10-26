@@ -376,6 +376,116 @@ else:
         emails_scanned = email.get('emails_scanned', 0)
         st.metric("📧 Emails Scanned", emails_scanned)
     
+    # NVD API Usage and ML Scoring Display
+    st.subheader("🔍 NVD API & ML Analysis")
+    
+    # Get vulnerability data for NVD API info
+    vuln_stats = vulnerabilities.get('vulnerability_stats', {})
+    api_stats = vuln_stats.get('api_usage_stats', {})
+    ml_model_info = vulnerabilities.get('ml_model_info', {})
+    
+    # Create columns for NVD API info
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        # NVD API Calls
+        total_calls = api_stats.get('total_calls', 0)
+        success_calls = api_stats.get('successful_calls', 0)
+        success_rate = api_stats.get('success_rate', 0)
+        
+        if total_calls > 0:
+            st.metric(
+                "📡 NVD API Calls", 
+                f"{total_calls}",
+                delta=f"✅ {success_rate:.1f}% success"
+            )
+        else:
+            st.metric("📡 NVD API Calls", "0", delta="No calls made")
+    
+    with col2:
+        # Vulnerabilities Found
+        total_vulns = vuln_stats.get('total_vulnerabilities', 0)
+        critical_vulns = vuln_stats.get('critical_vulnerabilities', 0)
+        high_vulns = vuln_stats.get('high_vulnerabilities', 0)
+        
+        if total_vulns > 0:
+            st.metric(
+                "🔍 Vulnerabilities Found", 
+                f"{total_vulns}",
+                delta=f"🚨 {critical_vulns} Critical, {high_vulns} High"
+            )
+        else:
+            st.metric("🔍 Vulnerabilities Found", "0", delta="✅ No vulnerabilities")
+    
+    with col3:
+        # ML Model Status
+        model_saved = ml_model_info.get('model_saved', False)
+        model_type = ml_model_info.get('model_type', 'Unknown')
+        
+        if model_saved:
+            st.metric(
+                "🤖 ML Model Status", 
+                "✅ Active",
+                delta=f"{model_type}"
+            )
+        else:
+            st.metric("🤖 ML Model Status", "❌ Not Loaded", delta="Fallback mode")
+    
+    with col4:
+        # Overall ML Risk Score
+        overall_risk_score = vulnerabilities.get('overall_risk_score', 0)
+        
+        if overall_risk_score > 0:
+            risk_color = "🔴" if overall_risk_score > 70 else "🟡" if overall_risk_score > 40 else "🟢"
+            st.metric(
+                "🎯 ML Risk Score", 
+                f"{overall_risk_score:.1f}/100",
+                delta=f"{risk_color} ML-based"
+            )
+        else:
+            st.metric("🎯 ML Risk Score", "0/100", delta="✅ No risks detected")
+    
+    # Detailed NVD API Information
+    if api_stats:
+        with st.expander("📊 Detailed NVD API Information", expanded=False):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("### 📡 API Usage Statistics")
+                st.write(f"**Total API Calls:** {api_stats.get('total_calls', 0)}")
+                st.write(f"**Successful Calls:** {api_stats.get('successful_calls', 0)}")
+                st.write(f"**Failed Calls:** {api_stats.get('failed_calls', 0)}")
+                st.write(f"**Success Rate:** {api_stats.get('success_rate', 0):.1f}%")
+                st.write(f"**API Key Configured:** {'✅ Yes' if api_stats.get('api_key_configured', False) else '❌ No'}")
+            
+            with col2:
+                st.markdown("### 🔍 Vulnerability Analysis")
+                st.write(f"**Packages Scanned:** {vuln_stats.get('total_packages_scanned', 0)}")
+                st.write(f"**Packages with Vulnerabilities:** {vuln_stats.get('packages_with_vulnerabilities', 0)}")
+                st.write(f"**Critical Vulnerabilities:** {vuln_stats.get('critical_vulnerabilities', 0)}")
+                st.write(f"**High Vulnerabilities:** {vuln_stats.get('high_vulnerabilities', 0)}")
+                st.write(f"**Medium Vulnerabilities:** {vuln_stats.get('medium_vulnerabilities', 0)}")
+                st.write(f"**Low Vulnerabilities:** {vuln_stats.get('low_vulnerabilities', 0)}")
+            
+            # ML Model Information
+            if ml_model_info:
+                st.markdown("### 🤖 ML Model Information")
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.write(f"**Model Type:** {ml_model_info.get('model_type', 'Unknown')}")
+                    st.write(f"**Model Saved:** {'✅ Yes' if ml_model_info.get('model_saved', False) else '❌ No'}")
+                    st.write(f"**Scaler Saved:** {'✅ Yes' if ml_model_info.get('scaler_saved', False) else '❌ No'}")
+                
+                with col2:
+                    st.write(f"**Encoders Saved:** {'✅ Yes' if ml_model_info.get('encoders_saved', False) else '❌ No'}")
+                    features = ml_model_info.get('features', [])
+                    if features:
+                        st.write(f"**Features Used:** {len(features)}")
+                        with st.expander("View Features"):
+                            for feature in features:
+                                st.write(f"• {feature}")
+    
     # Risk Gauge
     st.subheader("🎯 Risk Assessment")
     col1, col2 = st.columns([1, 1])
@@ -425,19 +535,107 @@ else:
         st.subheader("🔍 Vulnerability Scan")
         total_packages = vulnerabilities.get('total_packages', 0)
         vuln_list = vulnerabilities.get('vulnerabilities', [])
+        vuln_stats = vulnerabilities.get('vulnerability_stats', {})
         
-        col1, col2 = st.columns(2)
+        # Summary metrics
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("Packages Scanned", total_packages)
+            st.metric("📦 Packages Scanned", total_packages)
         with col2:
-            st.metric("Vulnerabilities Found", len(vuln_list))
+            st.metric("🔍 Total Vulnerabilities", len(vuln_list))
+        with col3:
+            st.metric("🚨 Critical", vuln_stats.get('critical_vulnerabilities', 0))
+        with col4:
+            st.metric("⚠️ High", vuln_stats.get('high_vulnerabilities', 0))
         
+        # ML Risk Score Display
+        overall_risk_score = vulnerabilities.get('overall_risk_score', 0)
+        if overall_risk_score > 0:
+            st.info(f"🤖 **ML-Based Overall Risk Score:** {overall_risk_score:.1f}/100")
+        
+        # Top Vulnerabilities by ML Risk Score
+        top_vulns = vulnerabilities.get('top_vulnerabilities', [])
+        if top_vulns:
+            st.subheader("🚨 Top Vulnerabilities (by ML Risk Score)")
+            
+            # Create a DataFrame for better display
+            vuln_data = []
+            for vuln in top_vulns[:10]:  # Show top 10
+                vuln_data.append({
+                    'CVE ID': vuln.get('cve_id', 'Unknown'),
+                    'Package': vuln.get('package_name', 'Unknown'),
+                    'Severity': vuln.get('severity_info', {}).get('highest_severity', 'Unknown'),
+                    'ML Risk Score': f"{vuln.get('ml_risk_score', 0):.1f}",
+                    'CVSS Score': vuln.get('cvss_scores', {}).get('v3_1', {}).get('base_score', 'N/A'),
+                    'Description': vuln.get('description', 'No description')[:100] + '...' if len(vuln.get('description', '')) > 100 else vuln.get('description', 'No description')
+                })
+            
+            if vuln_data:
+                df = pd.DataFrame(vuln_data)
+                st.dataframe(df, use_container_width=True)
+        
+        # Detailed vulnerability list
         if vuln_list:
-            st.write("**Vulnerabilities Detected:**")
+            st.subheader("📋 All Vulnerabilities")
+            
+            # Group by severity
+            severity_groups = {
+                'Critical': [],
+                'High': [],
+                'Medium': [],
+                'Low': []
+            }
+            
             for vuln in vuln_list:
-                st.error(f"❌ {vuln}")
+                severity = vuln.get('severity_info', {}).get('highest_severity', 'Unknown')
+                if severity in severity_groups:
+                    severity_groups[severity].append(vuln)
+            
+            # Display by severity
+            for severity, vulns in severity_groups.items():
+                if vulns:
+                    with st.expander(f"🚨 {severity} Severity ({len(vulns)} vulnerabilities)", expanded=(severity == 'Critical')):
+                        for vuln in vulns:
+                            col1, col2 = st.columns([3, 1])
+                            
+                            with col1:
+                                st.write(f"**{vuln.get('cve_id', 'Unknown')}** - {vuln.get('package_name', 'Unknown')}")
+                                st.write(f"*{vuln.get('description', 'No description')[:200]}...*")
+                                
+                                # CVSS details
+                                cvss_scores = vuln.get('cvss_scores', {})
+                                if cvss_scores:
+                                    if 'v3_1' in cvss_scores:
+                                        cvss = cvss_scores['v3_1']
+                                        st.write(f"**CVSS v3.1:** {cvss.get('base_score', 'N/A')} ({cvss.get('base_severity', 'Unknown')})")
+                                    elif 'v3_0' in cvss_scores:
+                                        cvss = cvss_scores['v3_0']
+                                        st.write(f"**CVSS v3.0:** {cvss.get('base_score', 'N/A')} ({cvss.get('base_severity', 'Unknown')})")
+                            
+                            with col2:
+                                ml_score = vuln.get('ml_risk_score', 0)
+                                if ml_score > 0:
+                                    risk_color = "🔴" if ml_score > 70 else "🟡" if ml_score > 40 else "🟢"
+                                    st.metric("ML Risk", f"{ml_score:.1f}", delta=f"{risk_color}")
+                                
+                                # Published date
+                                pub_date = vuln.get('published_date', '')
+                                if pub_date:
+                                    try:
+                                        from datetime import datetime
+                                        pub_dt = datetime.fromisoformat(pub_date.replace('Z', '+00:00'))
+                                        st.write(f"**Published:** {pub_dt.strftime('%Y-%m-%d')}")
+                                    except:
+                                        st.write(f"**Published:** {pub_date[:10]}")
+                            
+                            st.divider()
         else:
             st.success("✅ No vulnerabilities found!")
+            
+            # Show NVD API status even when no vulnerabilities
+            api_stats = vuln_stats.get('api_usage_stats', {})
+            if api_stats:
+                st.info(f"📡 **NVD API Status:** {api_stats.get('total_calls', 0)} calls made, {api_stats.get('success_rate', 0):.1f}% success rate")
     
     with tab3:
         st.subheader("📁 File Security Scan")

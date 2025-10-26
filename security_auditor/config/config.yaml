@@ -3,7 +3,7 @@ app:
   version: "1.0.0"
 apis:
   nvd:
-    api_key: ""
+    api_key: "78cb3533-7e8e-468e-ab8c-48ef387c5114"
   virustotal:
     api_key: "YOUR_VIRUSTOTAL_API_KEY"
   gmail:
