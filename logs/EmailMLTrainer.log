@@ -1,0 +1,25 @@
+2025-10-26 13:44:13,838 - EmailMLTrainer - INFO - Loading data from emails.csv
+2025-10-26 13:44:13,870 - EmailMLTrainer - INFO - Available columns: ['Subject', 'Having_IP', 'Having_At_Symbol', 'Prefix_Suffix', 'URL_Length_Long', 'HTTPS_Token_in_URL', 'Suspicious_TLD', 'Shortening_Service', 'Contains_Password_Field', 'Domain_Old(>12mo)', 'Alexa_Popular', 'label']
+2025-10-26 13:44:13,870 - EmailMLTrainer - INFO - Using subject column: Subject, label column: label
+2025-10-26 13:44:13,886 - EmailMLTrainer - INFO - Training random_forest model...
+2025-10-26 13:44:13,888 - EmailMLTrainer - INFO - Using features: ['Having_IP', 'Having_At_Symbol', 'Prefix_Suffix', 'URL_Length_Long', 'HTTPS_Token_in_URL', 'Suspicious_TLD', 'Shortening_Service', 'Contains_Password_Field', 'Domain_Old(>12mo)', 'Alexa_Popular']
+2025-10-26 13:44:14,296 - EmailMLTrainer - INFO - Model accuracy: 0.8890
+2025-10-26 13:44:14,314 - EmailMLTrainer - INFO - Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.84      0.90      0.87       408
+           1       0.93      0.88      0.90       592
+
+    accuracy                           0.89      1000
+   macro avg       0.88      0.89      0.89      1000
+weighted avg       0.89      0.89      0.89      1000
+
+2025-10-26 13:44:15,973 - EmailMLTrainer - INFO - Cross-validation scores: [0.88125 0.88125 0.8825  0.89125 0.8925 ]
+2025-10-26 13:44:15,974 - EmailMLTrainer - INFO - Mean CV score: 0.8858 (+/- 0.0101)
+2025-10-26 13:44:16,070 - EmailMLTrainer - INFO - Model saved to security_auditor/ml_engine/models/email_phishing_detector.pkl
+2025-10-26 13:44:16,070 - EmailMLTrainer - INFO - Scaler saved to security_auditor/ml_engine/models/email_phishing_detector_scaler.pkl
+2025-10-26 13:44:16,070 - EmailMLTrainer - INFO - Features saved to security_auditor/ml_engine/models/email_phishing_detector_features.pkl
+2025-10-26 13:45:00,656 - EmailMLTrainer - INFO - Model loaded from security_auditor/ml_engine/models/email_phishing_detector.pkl
+2025-10-26 13:47:09,444 - EmailMLTrainer - INFO - Model loaded from security_auditor/ml_engine/models/email_phishing_detector.pkl
+2025-10-26 22:50:32,017 - EmailMLTrainer - INFO - Model loaded from security_auditor/ml_engine/models/email_phishing_detector.pkl
+2025-10-26 22:58:23,231 - EmailMLTrainer - INFO - Model loaded from security_auditor/ml_engine/models/email_phishing_detector.pkl

@@ -1,0 +1,79 @@
+════════════════════════════════════════════════════════════
+  SECURITY AUDITOR - QUICK REFERENCE
+════════════════════════════════════════════════════════════
+
+LOCATIONS:
+----------
+Main file:     security_auditor/main.py
+Dashboard:     security_auditor/dashboard/live_dashboard.py
+Model:         security_auditor/ml_engine/models/
+Reports:       reports/security_audit_report_*.json
+Config:        security_auditor/config/config.yaml
+Logs:          security_auditor/logs/
+
+════════════════════════════════════════════════════════════
+  MAIN COMMANDS
+════════════════════════════════════════════════════════════
+
+Run Dashboard:
+  python security_auditor/main.py
+
+Run Audit Only:
+  python security_auditor/main.py --mode audit
+
+Windows (Double-click):
+  run_dashboard.bat
+
+════════════════════════════════════════════════════════════
+  ML TRAINING
+════════════════════════════════════════════════════════════
+
+Train Model:
+  python security_auditor/train_email_model.py --data_path emails.csv
+
+Model Location:
+  security_auditor/ml_engine/models/
+
+Model Status:  ✅ TRAINED (88.9% accuracy)
+
+════════════════════════════════════════════════════════════
+  API SETUP (Optional)
+════════════════════════════════════════════════════════════
+
+Gmail:
+  - Get OAuth from Google Cloud Console
+  - Save as: security_auditor/config/gmail_credentials.json
+
+VirusTotal:
+  - Get key from virustotal.com
+  - Add to config/config.yaml
+
+NVD:
+  - Get key from nvd.nist.gov
+  - Add to config/config.yaml
+
+════════════════════════════════════════════════════════════
+  DASHBOARD USAGE
+════════════════════════════════════════════════════════════
+
+1. Run: python security_auditor/main.py
+2. Browser opens: localhost:8501
+3. Click: "Run New Security Scan"
+4. View results in dashboard
+
+════════════════════════════════════════════════════════════
+  TROUBLESHOOTING
+════════════════════════════════════════════════════════════
+
+No dashboard?
+  pip install streamlit plotly
+
+ML model not found?
+  python security_auditor/train_email_model.py --data_path emails.csv
+
+Wrong path?
+  cd C:\Users\Sanjay\OneDrive\Desktop\KLE-Project
+
+════════════════════════════════════════════════════════════
+See README.md for detailed documentation
+════════════════════════════════════════════════════════════

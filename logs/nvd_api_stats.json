@@ -1,0 +1,10 @@
+{
+  "total_calls": 0,
+  "successful_calls": 0,
+  "failed_calls": 0,
+  "packages_scanned": 0,
+  "vulnerabilities_found": 0,
+  "api_key_used": false,
+  "last_scan_time": null,
+  "scan_history": []
+}

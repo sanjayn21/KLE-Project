@@ -57,11 +57,40 @@ def main() -> int:
     except Exception:
         pass
     parser = argparse.ArgumentParser(description="Unified Security Auditor")
-    parser.add_argument("--mode", choices=["audit", "dashboard"], default="audit")
+    parser.add_argument("--mode", choices=["audit", "dashboard", "live"], default="live")
     args = parser.parse_args()
 
-    if args.mode == "dashboard":
-        os.system("streamlit run security_auditor/dashboard/security_dashboard.py")
+    # Get the correct base path
+    if __file__ == "__main__":
+        base_path = Path(__file__).resolve().parent
+    else:
+        base_path = Path(__file__).resolve().parent
+    
+    # Determine script location and adjust paths
+    current_dir = Path.cwd()
+    dashboard_live = base_path / "dashboard" / "live_dashboard.py"
+    dashboard_standalone = base_path / "dashboard" / "security_dashboard.py"
+    
+    # Try both relative paths
+    if dashboard_live.exists():
+        if args.mode == "dashboard":
+            os.system(f'streamlit run "{dashboard_standalone}"')
+        elif args.mode == "live":
+            os.system(f'streamlit run "{dashboard_live}"')
+    elif (base_path.parent / "security_auditor" / "dashboard" / "live_dashboard.py").exists():
+        # Run from root directory
+        if args.mode == "dashboard":
+            os.system("streamlit run security_auditor/dashboard/security_dashboard.py")
+        elif args.mode == "live":
+            os.system("streamlit run security_auditor/dashboard/live_dashboard.py")
+    else:
+        # Try current directory
+        if args.mode == "dashboard":
+            os.system("streamlit run dashboard/security_dashboard.py")
+        elif args.mode == "live":
+            os.system("streamlit run dashboard/live_dashboard.py")
+    
+    if args.mode in ["dashboard", "live"]:
         return 0
 
     auditor = SecurityAuditor()

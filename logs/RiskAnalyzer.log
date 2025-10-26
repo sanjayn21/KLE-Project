@@ -1,0 +1,6 @@
+2025-10-26 22:53:13,126 - RiskAnalyzer - INFO - Starting enhanced risk analysis...
+2025-10-26 22:53:13,127 - RiskAnalyzer - INFO - Using ML-based vulnerability score: 0.0
+2025-10-26 22:53:13,127 - RiskAnalyzer - INFO - Risk analysis complete - Overall Score: 1.5/100 (LOW)
+2025-10-26 23:00:46,647 - RiskAnalyzer - INFO - Starting enhanced risk analysis...
+2025-10-26 23:00:46,647 - RiskAnalyzer - INFO - Using ML-based vulnerability score: 0.0
+2025-10-26 23:00:46,648 - RiskAnalyzer - INFO - Risk analysis complete - Overall Score: 1.5/100 (LOW)

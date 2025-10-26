@@ -1,0 +1,10 @@
+2025-10-26 11:50:02,233 - EmailScanner - WARNING - ML model not found, falling back to rule-based detection
+2025-10-26 11:59:29,160 - EmailScanner - WARNING - ML model not found, falling back to rule-based detection
+2025-10-26 12:04:56,575 - EmailScanner - WARNING - ML model not found, falling back to rule-based detection
+2025-10-26 12:05:17,857 - EmailScanner - WARNING - ML model not found, falling back to rule-based detection
+2025-10-26 12:10:09,835 - EmailScanner - WARNING - ML model not found, falling back to rule-based detection
+2025-10-26 12:18:04,122 - EmailScanner - WARNING - ML model not found, falling back to rule-based detection
+2025-10-26 13:45:00,657 - EmailScanner - INFO - ML model loaded successfully
+2025-10-26 13:47:09,444 - EmailScanner - INFO - ML model loaded successfully
+2025-10-26 22:50:32,019 - EmailScanner - INFO - ML model loaded successfully
+2025-10-26 22:58:23,231 - EmailScanner - INFO - ML model loaded successfully
