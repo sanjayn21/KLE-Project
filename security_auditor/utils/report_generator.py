@@ -13,7 +13,7 @@ class ReportGenerator:
 
     def generate_report(self, results):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{self.output_dir}/security_report_{timestamp}.json"
+        filename = f"{self.output_dir}/security_audit_report_{timestamp}.json"
         with open(filename, "w") as f:
             json.dump(results, f, indent=2)
         self.logger.info(f"Report saved: {filename}")

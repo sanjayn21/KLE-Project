@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+"""
+Live Security Dashboard with Real-time Scanning and Report Display
+"""
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
@@ -6,6 +10,20 @@ import os
 import glob
 from datetime import datetime
 import pandas as pd
+import sys
+from pathlib import Path  
+import time
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from scanners.config_scanner import ConfigScanner
+from scanners.vulnerability_scanner import VulnerabilityScanner
+from scanners.file_scanner import FileScanner
+from scanners.email_scanner import EmailScanner
+from ml_engine.risk_analyzer import RiskAnalyzer
+from utils.report_generator import ReportGenerator
+from utils.logger import setup_logger
 
 # Page configuration
 st.set_page_config(
@@ -15,7 +33,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better styling
+# Custom CSS
 st.markdown("""
 <style>
     .main-header {
@@ -24,21 +42,68 @@ st.markdown("""
         text-align: center;
         margin-bottom: 2rem;
     }
-    .metric-card {
-        background-color: #f0f2f6;
+    .scanning-status {
         padding: 1rem;
+        background-color: #e3f2fd;
         border-radius: 0.5rem;
-        border-left: 5px solid #1f77b4;
+        border-left: 5px solid #2196f3;
     }
-    .risk-low { color: #28a745; }
-    .risk-medium { color: #ffc107; }
-    .risk-high { color: #dc3545; }
 </style>
 """, unsafe_allow_html=True)
 
+@st.cache_data
+def run_security_scan():
+    """Run the complete security audit"""
+    logger = setup_logger("SecurityAuditor")
+    results = {}
+    
+    try:
+        logger.info("Starting security audit...")
+        
+        # Initialize scanners
+        config_scanner = ConfigScanner()
+        vuln_scanner = VulnerabilityScanner()
+        file_scanner = FileScanner()
+        email_scanner = EmailScanner()
+        risk_analyzer = RiskAnalyzer()
+        report_generator = ReportGenerator()
+        
+        # Run scans
+        logger.info("Running config scanner...")
+        config_results = config_scanner.scan()
+        
+        logger.info("Running vulnerability scanner...")
+        vuln_results = vuln_scanner.scan()
+        
+        logger.info("Running file scanner...")
+        file_results = file_scanner.scan()
+        
+        logger.info("Running email scanner...")
+        email_results = email_scanner.scan()
+        
+        # Combine results
+        results = {
+            "config": config_results,
+            "vulnerabilities": vuln_results,
+            "files": file_results,
+            "email": email_results
+        }
+        
+        # Generate risk analysis
+        results["risk_analysis"] = risk_analyzer.analyze(results)
+        
+        # Save report
+        report_generator.generate_report(results)
+        
+        logger.info("Security audit completed")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Error during scan: {str(e)}")
+        return None
+
 def load_latest_report():
     """Load the most recent security report"""
-    # Check both root reports and security_auditor/reports directories
     reports_dirs = ["reports", "security_auditor/reports"]
     all_report_files = []
     
@@ -53,8 +118,6 @@ def load_latest_report():
     if not all_report_files:
         return None
     
-    # Parse timestamp from filename and sort to get the most recent
-    # Filename format: security_audit_report_YYYYMMDD_HHMMSS.json
     def get_timestamp_from_filename(filepath):
         filename = os.path.basename(filepath)
         try:
@@ -67,12 +130,11 @@ def load_latest_report():
                 return '00000000_000000'
             
             if len(parts) == 2:
-                return parts[0] + '_' + parts[1]  # YYYYMMDD_HHMMSS
+                return parts[0] + '_' + parts[1]
         except:
             pass
-        return '00000000_000000'  # Fallback for invalid filenames
+        return '00000000_000000'
     
-    # Sort by timestamp (filename-based) to get the most recent
     latest_report = max(all_report_files, key=get_timestamp_from_filename)
     
     try:
@@ -82,24 +144,15 @@ def load_latest_report():
         st.error(f"Error loading report: {e}")
         return None
 
-def get_risk_color(score):
-    """Get color based on risk score"""
-    if score < 20:
-        return "🟢"
-    elif score < 50:
-        return "🟡"
-    else:
-        return "🔴"
-
 def create_risk_gauge(score, title):
     """Create a gauge chart for risk score"""
     fig = go.Figure(go.Indicator(
-        mode = "gauge+number+delta",
-        value = score,
-        domain = {'x': [0, 1], 'y': [0, 1]},
-        title = {'text': title},
-        delta = {'reference': 50},
-        gauge = {
+        mode="gauge+number+delta",
+        value=score,
+        domain={'x': [0, 1], 'y': [0, 1]},
+        title={'text': title},
+        delta={'reference': 50},
+        gauge={
             'axis': {'range': [None, 100]},
             'bar': {'color': "darkblue"},
             'steps': [
@@ -155,28 +208,95 @@ def create_file_type_chart(file_results):
     df = pd.DataFrame(list(file_types.items()), columns=['File Type', 'Count'])
     df = df.sort_values('Count', ascending=False).head(10)
     
-    fig = px.pie(
-        df, 
-        values='Count', 
-        names='File Type',
-        title="📁 File Types Scanned"
-    )
+    fig = px.pie(df, values='Count', names='File Type', title="📁 File Types Scanned")
     return fig
 
-# Main dashboard
+# Main Dashboard
 st.markdown('<h1 class="main-header">🛡️ Security Auditor Dashboard</h1>', unsafe_allow_html=True)
 
-# Load data
+# Sidebar Controls
+st.sidebar.title("⚙️ Control Panel")
+
+# Check if we need to run a new scan or show existing report
+run_new_scan = st.sidebar.button("🔄 Run New Security Scan", type="primary")
+
+if run_new_scan:
+    st.markdown('<div class="scanning-status">', unsafe_allow_html=True)
+    
+    # Progress tracking
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    steps = [
+        ("🔍 Scanning Configuration", 20),
+        ("🔍 Analyzing Vulnerabilities", 40),
+        ("📁 Scanning Files", 60),
+        ("📧 Checking Emails", 80),
+        ("📊 Generating Report", 100)
+    ]
+    
+    try:
+        for step_name, progress in steps:
+            status_text.text(step_name)
+            progress_bar.progress(progress / 100)
+            time.sleep(0.3)  # Small delay for visual feedback
+        
+        # Run actual scan
+        status_text.text("⏳ Running complete security audit...")
+        
+        results = run_security_scan()
+        
+        if results:
+            progress_bar.progress(100)
+            status_text.text("✅ Scan completed successfully!")
+            time.sleep(1)
+            
+            # Clear the cache to show new data
+            st.cache_data.clear()
+            
+            # Reload page to show results
+            st.rerun()
+        else:
+            status_text.text("❌ Scan failed. Please check logs.")
+    except Exception as e:
+        st.error(f"Error during scan: {str(e)}")
+        status_text.text(f"❌ Error: {str(e)}")
+    finally:
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# Load and display data
 data = load_latest_report()
 
 if data is None:
-    st.error("❌ No security reports found. Please run an audit first.")
-    st.info("Run: `python main.py --mode audit`")
-else:
-    # Sidebar for report selection
-    st.sidebar.title("📊 Report Selection")
+    st.warning("⚠️ No security reports found.")
+    st.info("💡 Click **'🔄 Run New Security Scan'** in the sidebar to start a security audit.")
     
-    # Get all available reports from both directories
+    # Show instructions
+    with st.expander("📖 How to Use", expanded=False):
+        st.markdown("""
+        ### Steps to Run Security Audit:
+        
+        1. **Click the "🔄 Run New Security Scan" button** in the sidebar
+        2. Wait for the scan to complete (typically 1-3 minutes)
+        3. Results will automatically display in the dashboard
+        
+        ### What Gets Scanned:
+        - 🔍 **Configuration** - Firewall, SSH, network services
+        - 🔍 **Vulnerabilities** - System packages and security updates
+        - 📁 **Files** - Suspicious files and VirusTotal analysis
+        - 📧 **Email** - Phishing detection and email security
+        
+        ### Report Features:
+        - Real-time risk scoring
+        - Visual charts and graphs
+        - Detailed vulnerability listings
+        - File security analysis
+        - Email phishing detection
+        """)
+else:
+    # Sidebar report info
+    st.sidebar.title("📊 Report Info")
+    
     all_reports = []
     for dir_path in ["reports", "security_auditor/reports"]:
         if os.path.exists(dir_path):
@@ -186,14 +306,7 @@ else:
             all_reports.extend(report_files)
             all_reports.extend(audit_files)
     
-    # Get the currently loaded report name
-    current_report = None
-    # Find which report was loaded
-    report_names = [os.path.basename(f) for f in all_reports]
-    
-    if report_names:
-        # Determine the current report by checking which one matches
-        # Since load_latest_report() was used, find the latest one
+    if all_reports:
         def get_timestamp_from_filename(filepath):
             filename = os.path.basename(filepath)
             try:
@@ -214,15 +327,14 @@ else:
         latest_report_path = max(all_reports, key=get_timestamp_from_filename)
         current_report = os.path.basename(latest_report_path)
         
+        st.sidebar.success(f"📌 Latest Report:\n**{current_report}**")
+        
+        # Report selection
+        report_names = [os.path.basename(f) for f in all_reports]
         if len(report_names) > 1:
-            # Show current report info
-            st.sidebar.info(f"📌 Currently Viewing:\n**{current_report}**")
-            st.sidebar.markdown("---")
-            
-            selected_report = st.sidebar.selectbox("Select Different Report", [current_report] + [r for r in report_names if r != current_report])
+            selected_report = st.sidebar.selectbox("View Different Report", report_names, index=0)
             if selected_report and selected_report != current_report:
                 try:
-                    # Find the full path of the selected report
                     full_path = None
                     for dir_path in ["reports", "security_auditor/reports"]:
                         potential_path = os.path.join(dir_path, selected_report)
@@ -233,11 +345,8 @@ else:
                     if full_path:
                         with open(full_path, 'r') as f:
                             data = json.load(f)
-                        st.sidebar.success(f"✅ Switched to {selected_report}")
                 except Exception as e:
-                    st.error(f"Error loading selected report: {e}")
-        else:
-            st.sidebar.info(f"📄 Current Report:\n**{current_report}**")
+                    st.error(f"Error loading report: {e}")
     
     # Extract data
     risk_analysis = data.get('risk_analysis', {})
@@ -252,12 +361,8 @@ else:
     with col1:
         overall_score = risk_analysis.get('overall_score', 0)
         risk_level = risk_analysis.get('risk_level', 'UNKNOWN')
-        risk_icon = get_risk_color(overall_score)
-        st.metric(
-            "🎯 Overall Risk Score", 
-            f"{overall_score}/100",
-            delta=f"{risk_icon} {risk_level}"
-        )
+        risk_icon = "🟢" if overall_score < 20 else "🟡" if overall_score < 50 else "🔴"
+        st.metric("🎯 Overall Risk Score", f"{overall_score}/100", delta=f"{risk_icon} {risk_level}")
     
     with col2:
         files_scanned = files.get('files_scanned', 0)
@@ -280,7 +385,6 @@ else:
         st.plotly_chart(gauge_fig, use_container_width=True)
     
     with col2:
-        # Component scores
         component_scores = risk_analysis.get('component_scores', {})
         if component_scores:
             comp_fig = create_component_chart(component_scores)
@@ -312,7 +416,7 @@ else:
             
             if ports:
                 st.write("**Open Ports:**")
-                for port in ports[:10]:  # Show first 10
+                for port in ports[:10]:
                     st.code(port)
                 if len(ports) > 10:
                     st.write(f"... and {len(ports) - 10} more ports")
@@ -346,19 +450,16 @@ else:
             st.metric("Files Analyzed", len(file_results))
         
         with col2:
-            # File type chart
             if file_results:
                 file_chart = create_file_type_chart(file_results)
                 if file_chart:
                     st.plotly_chart(file_chart, use_container_width=True)
         
-        # Show file details
         if file_results:
             st.write("**File Scan Results:**")
-            for i, result in enumerate(file_results[:20]):  # Show first 20
+            for i, result in enumerate(file_results[:20]):
                 file_path = result.get('file', 'Unknown')
                 file_name = os.path.basename(file_path)
-                size = result.get('size', 0)
                 vt_result = result.get('vt_result', {})
                 
                 if vt_result.get('found'):
@@ -400,7 +501,6 @@ else:
         ports = config.get('network_services', {}).get('listening_ports', [])
         
         if ports:
-            # Create network port chart
             port_data = []
             for port in ports:
                 if 'TCP' in port:
@@ -420,3 +520,4 @@ else:
 # Footer
 st.markdown("---")
 st.markdown("🛡️ **Security Auditor Dashboard** - Real-time security monitoring and analysis")
+
