@@ -1,0 +1,10 @@
+# Environment variables
+.env
+
+# Gmail credentials
+config/gmail_credentials.json
+config/token.json
+
+# Optional Gmail cache
+credentials.json
+token.json
